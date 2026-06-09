@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TodoApp.Models;
+using Microsoft.AspNetCore.Localization;
 
 namespace TodoApp.Controllers
 {
@@ -109,6 +110,17 @@ namespace TodoApp.Controllers
             }
 
             return File(Encoding.UTF8.GetBytes(csvBuilder.ToString()), "text/csv", "tasks.csv");
+        }
+        [HttpGet]
+        public IActionResult ChangeLanguage(string culture, string returnUrl = "/")
+        {
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+        );
+
+                return LocalRedirect(returnUrl);
         }
     }
 }
