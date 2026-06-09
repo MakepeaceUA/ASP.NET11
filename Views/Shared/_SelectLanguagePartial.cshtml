@@ -1,0 +1,20 @@
+@using Microsoft.AspNetCore.Localization
+
+@{
+   
+    var requestCulture = Context.Features.Get<IRequestCultureFeature>();
+    var currentCulture = requestCulture?.RequestCulture.UICulture.Name ?? "ru";
+    
+    var returnUrl = string.IsNullOrEmpty(Context.Request.Path) 
+        ? "~/" 
+        : $"~{Context.Request.Path.Value}{Context.Request.QueryString.Value}";
+}
+
+<form asp-controller="Home" asp-action="SetLanguage" asp-route-returnUrl="@returnUrl" method="post" class="d-inline-flex ms-auto">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Language switcher">
+        <button type="submit" name="culture" value="uk" 
+                class="btn @(currentCulture == "uk" ? "btn-primary" : "btn-outline-primary")">UK</button>
+        <button type="submit" name="culture" value="ru" 
+                class="btn @(currentCulture == "ru" ? "btn-primary" : "btn-outline-primary")">RU</button>
+    </div>
+</form>

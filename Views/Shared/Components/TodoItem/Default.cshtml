@@ -1,0 +1,21 @@
+@model TodoApp.Models.TodoItem
+
+<tr class="@(Model.IsCompleted ? "completed-task" : "")">
+    <td>@Html.DisplayFor(modelItem => Model.Title)</td>
+    <td>@(Model.IsCompleted ? "Выполнено" : "В процессе")</td>
+    <td>@Model.CreatedAt.ToString("g")</td>
+    <td>
+        <div class="btn-group">
+            <a asp-controller="Task" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-info">Детали</a>
+            @if (!Model.IsCompleted)
+            {
+                <form asp-controller="Task" asp-action="Complete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-success">Выполнить</button>
+                </form>
+            }
+            <form asp-controller="Task" asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+            </form>
+        </div>
+    </td>
+</tr>
