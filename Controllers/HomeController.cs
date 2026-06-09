@@ -20,6 +20,7 @@ public class HomeController : Controller
         return View();
     }
 
+    [ResponseCache(Duration = 60)]
     public IActionResult Privacy()
     {
         return View();

@@ -15,6 +15,9 @@ builder.Services.AddControllersWithViews()
 builder.Services.AddDbContext<TodoContext>(options =>
     options.UseSqlite("Data Source=todo.db"));
 
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCaching();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -28,19 +31,20 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Произошла ошибка при инициализации базы данных.");
+        logger.LogError(ex, "Error occurred.");
     }
 }
 
 var supportedCultures = new[]
 {
+    new CultureInfo("uk"),
     new CultureInfo("ru"),
-    new CultureInfo("uk")
+    new CultureInfo("en")
 };
 
 app.UseRequestLocalization(new RequestLocalizationOptions
 {
-    DefaultRequestCulture = new RequestCulture("ru"),
+    DefaultRequestCulture = new RequestCulture("uk"),
     SupportedCultures = supportedCultures,
     SupportedUICultures = supportedCultures
 });
@@ -55,6 +59,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseResponseCaching();
 
 app.UseAuthorization();
 

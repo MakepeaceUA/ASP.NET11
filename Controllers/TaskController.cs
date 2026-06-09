@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.AspNetCore.Localization;
 using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TodoApp.Models;
-using Microsoft.AspNetCore.Localization;
 
 namespace TodoApp.Controllers
 {
@@ -14,13 +15,16 @@ namespace TodoApp.Controllers
     {
         private readonly TodoContext _context;
         private readonly IStringLocalizer<TaskController> _localizer;
+        private readonly IMemoryCache _cache;
 
-        public TaskController(TodoContext context, IStringLocalizer<TaskController> localizer)
+        public TaskController(TodoContext context, IStringLocalizer<TaskController> localizer, IMemoryCache cache)
         {
             _context = context;
             _localizer = localizer;
+            _cache = cache;
         }
 
+        [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "statusFilter", "sortOrder", "searchQuery" })]
         public IActionResult Index(string statusFilter, string sortOrder, string searchQuery)
         {
             ViewData["StatusFilter"] = statusFilter;
@@ -32,12 +36,32 @@ namespace TodoApp.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            var selectedTask = await _context.TodoItems.FindAsync(id);
-            if (selectedTask == null)
+            string cacheKey = $"task_details_{id}";
+            if (!_cache.TryGetValue(cacheKey, out TodoItem? selectedTask))
             {
-                return NotFound();
+                selectedTask = await _context.TodoItems.FindAsync(id);
+                if (selectedTask == null)
+                {
+                    return NotFound();
+                }
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+
+                _cache.Set(cacheKey, selectedTask, cacheOptions);
             }
             return View(selectedTask);
+        }
+
+        public IActionResult ChangeLanguage(string culture, string returnUrl = "/")
+        {
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+            );
+
+            return LocalRedirect(returnUrl);
         }
 
         public IActionResult Create()
@@ -75,6 +99,9 @@ namespace TodoApp.Controllers
             }
             taskToComplete.IsCompleted = true;
             await _context.SaveChangesAsync();
+            
+            _cache.Remove($"task_details_{id}");
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -88,6 +115,9 @@ namespace TodoApp.Controllers
             }
             _context.TodoItems.Remove(taskToDelete);
             await _context.SaveChangesAsync();
+
+            _cache.Remove($"task_details_{id}");
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -110,17 +140,6 @@ namespace TodoApp.Controllers
             }
 
             return File(Encoding.UTF8.GetBytes(csvBuilder.ToString()), "text/csv", "tasks.csv");
-        }
-        [HttpGet]
-        public IActionResult ChangeLanguage(string culture, string returnUrl = "/")
-        {
-            Response.Cookies.Append(
-                CookieRequestCultureProvider.DefaultCookieName,
-                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
-        );
-
-                return LocalRedirect(returnUrl);
         }
     }
 }
